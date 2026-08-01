@@ -439,28 +439,54 @@
     class SnowFlake { constructor(){this.reset();} reset(){this.x=Math.random()*canvas.width;this.y=Math.random()*-100;this.speed=1+Math.random()*2;this.size=2+Math.random()*4;this.opacity=0.5+Math.random()*0.5;this.wobble=Math.random()*Math.PI*2;} update(){this.y+=this.speed;this.wobble+=0.02;this.x+=Math.sin(this.wobble)*0.5;if(this.y>canvas.height)this.reset();} draw(){ctx.beginPath();ctx.arc(this.x,this.y,this.size,0,Math.PI*2);ctx.fillStyle=`rgba(255,255,255,${this.opacity})`;ctx.fill();} }
     class Cloud { constructor(){this.reset();} reset(){this.x=-200;this.y=50+Math.random()*150;this.speed=0.3+Math.random()*0.5;this.size=80+Math.random()*60;this.opacity=0.3+Math.random()*0.3;} update(){this.x+=this.speed;if(this.x>canvas.width+200)this.reset();} draw(){ctx.fillStyle=`rgba(255,255,255,${this.opacity})`;ctx.beginPath();ctx.arc(this.x,this.y,this.size*0.5,0,Math.PI*2);ctx.arc(this.x+this.size*0.3,this.y-this.size*0.1,this.size*0.4,0,Math.PI*2);ctx.arc(this.x-this.size*0.3,this.y,this.size*0.35,0,Math.PI*2);ctx.fill();} }
     class SunRay { constructor(){this.reset();} reset(){this.x=canvas.width-150;this.y=80;this.angle=Math.random()*Math.PI*2;this.speed=0.005+Math.random()*0.01;this.length=100+Math.random()*100;this.opacity=0.1+Math.random()*0.15;} update(){this.angle+=this.speed;} draw(){ctx.save();ctx.translate(this.x,this.y);ctx.rotate(this.angle);const g=ctx.createLinearGradient(0,0,this.length,0);g.addColorStop(0,`rgba(255,220,100,${this.opacity})`);g.addColorStop(1,"rgba(255,220,100,0)");ctx.fillStyle=g;ctx.fillRect(0,-2,this.length,4);ctx.restore();} }
+    class Star { constructor(){this.reset();} reset(){this.x=Math.random()*canvas.width;this.y=Math.random()*canvas.height*0.6;this.size=0.5+Math.random()*2;this.opacity=0.3+Math.random()*0.7;this.twinkle=Math.random()*Math.PI*2;this.twinkleSpeed=0.02+Math.random()*0.03;} update(){this.twinkle+=this.twinkleSpeed;this.opacity=0.3+Math.abs(Math.sin(this.twinkle))*0.7;} draw(){ctx.beginPath();ctx.arc(this.x,this.y,this.size,0,Math.PI*2);ctx.fillStyle=`rgba(255,255,255,${this.opacity})`;ctx.fill();} }
+    class Moon { constructor(){this.x=canvas.width-120;this.y=80;this.size=35;} update(){} draw(){ctx.save();ctx.beginPath();ctx.arc(this.x,this.y,this.size,0,Math.PI*2);ctx.fillStyle="rgba(255,253,230,0.9)";ctx.fill();ctx.beginPath();ctx.arc(this.x+10,this.y-5,this.size-5,0,Math.PI*2);ctx.fillStyle="#0d0d1a";ctx.fill();ctx.beginPath();ctx.arc(this.x,this.y,this.size+15,0,Math.PI*2);const g=ctx.createRadialGradient(this.x,this.y,this.size,this.x,this.y,this.size+15);g.addColorStop(0,"rgba(200,200,255,0.15)");g.addColorStop(1,"rgba(200,200,255,0)");ctx.fillStyle=g;ctx.fill();ctx.restore();} }
 
     let weatherParticles = [];
-    let currentWeatherType = "clear";
+    let currentWeatherType = "";
 
-    function setWeatherType(code) {
+    function getTimeOfDay(isDay, hour) {
+      if (!isDay) return "night";
+      if (hour >= 5 && hour < 8) return "dawn";
+      if (hour >= 8 && hour < 17) return "day";
+      if (hour >= 17 && hour < 20) return "dusk";
+      return "night";
+    }
+
+    function setWeatherType(code, isDay) {
       if (!settings.animations) { ctx.clearRect(0,0,canvas.width,canvas.height); return; }
+      const hour = new Date().getHours();
+      const tod = getTimeOfDay(isDay, hour);
       let type = "clear";
       if (code >= 95) type = "storm";
       else if (code >= 61 || (code >= 80 && code <= 82)) type = "rain";
       else if ((code >= 71 && code <= 77) || code >= 85) type = "snow";
       else if (code >= 2 && code <= 3) type = "clouds";
-      if (type !== currentWeatherType) {
-        currentWeatherType = type;
+      const key = type + "_" + tod;
+      if (key !== currentWeatherType) {
+        currentWeatherType = key;
         weatherParticles = [];
         if (animationId) cancelAnimationFrame(animationId);
         const bg = document.getElementById("weatherBg");
-        switch(type) {
-          case "rain": bg.style.background = "linear-gradient(180deg, #37474f 0%, #263238 100%)"; for (let i=0;i<150;i++) weatherParticles.push(new RainDrop()); break;
-          case "snow": bg.style.background = "linear-gradient(180deg, #546e7a 0%, #37474f 100%)"; for (let i=0;i<100;i++) weatherParticles.push(new SnowFlake()); break;
-          case "storm": bg.style.background = "linear-gradient(180deg, #1a1a2e 0%, #0d0d1a 100%)"; for (let i=0;i<200;i++) weatherParticles.push(new RainDrop()); break;
-          case "clouds": bg.style.background = "linear-gradient(180deg, #546e7a 0%, #37474f 100%)"; for (let i=0;i<8;i++) weatherParticles.push(new Cloud()); break;
-          default: bg.style.background = "linear-gradient(180deg, #4a90d9 0%, #357abd 100%)"; for (let i=0;i<6;i++) weatherParticles.push(new SunRay()); for (let i=0;i<3;i++) weatherParticles.push(new Cloud());
+        switch(key) {
+          case "clear_night": bg.style.background="linear-gradient(180deg,#0a0a1a 0%,#0d1b2a 50%,#1b2838 100%)"; for(let i=0;i<120;i++) weatherParticles.push(new Star()); weatherParticles.push(new Moon()); break;
+          case "clouds_night": bg.style.background="linear-gradient(180deg,#0a0a1a 0%,#1a1a2e 100%)"; for(let i=0;i<80;i++) weatherParticles.push(new Star()); for(let i=0;i<5;i++) weatherParticles.push(new Cloud()); break;
+          case "rain_night": bg.style.background="linear-gradient(180deg,#0a0e14 0%,#0d1117 100%)"; for(let i=0;i<120;i++) weatherParticles.push(new RainDrop()); for(let i=0;i<30;i++) weatherParticles.push(new Star()); break;
+          case "snow_night": bg.style.background="linear-gradient(180deg,#0a0e14 0%,#1a1a2e 100%)"; for(let i=0;i<80;i++) weatherParticles.push(new SnowFlake()); for(let i=0;i<40;i++) weatherParticles.push(new Star()); break;
+          case "storm_night": bg.style.background="linear-gradient(180deg,#050510 0%,#0a0a1a 100%)"; for(let i=0;i<180;i++) weatherParticles.push(new RainDrop()); break;
+          case "clear_dawn": bg.style.background="linear-gradient(180deg,#1a1a3e 0%,#c06040 40%,#f0a050 100%)"; for(let i=0;i<4;i++) weatherParticles.push(new Cloud()); break;
+          case "clear_dusk": bg.style.background="linear-gradient(180deg,#1a1a3e 0%,#8040a0 40%,#d06040 100%)"; for(let i=0;i<4;i++) weatherParticles.push(new Cloud()); break;
+          case "clouds_dawn": bg.style.background="linear-gradient(180deg,#2a2a4e 0%,#a07060 100%)"; for(let i=0;i<6;i++) weatherParticles.push(new Cloud()); break;
+          case "clouds_dusk": bg.style.background="linear-gradient(180deg,#2a2a4e 0%,#7050a0 100%)"; for(let i=0;i<6;i++) weatherParticles.push(new Cloud()); break;
+          case "rain_dawn": case "rain_dusk": bg.style.background="linear-gradient(180deg,#2a2a3e 0%,#4a4a5a 100%)"; for(let i=0;i<120;i++) weatherParticles.push(new RainDrop()); break;
+          case "snow_dawn": case "snow_dusk": bg.style.background="linear-gradient(180deg,#3a3a4e 0%,#5a5a6a 100%)"; for(let i=0;i<80;i++) weatherParticles.push(new SnowFlake()); break;
+          case "storm_dawn": case "storm_dusk": bg.style.background="linear-gradient(180deg,#1a1a2e 0%,#2a2a3a 100%)"; for(let i=0;i<160;i++) weatherParticles.push(new RainDrop()); break;
+          case "clear_day": bg.style.background="linear-gradient(180deg,#4a90d9 0%,#357abd 100%)"; for(let i=0;i<6;i++) weatherParticles.push(new SunRay()); for(let i=0;i<3;i++) weatherParticles.push(new Cloud()); break;
+          case "clouds_day": bg.style.background="linear-gradient(180deg,#546e7a 0%,#37474f 100%)"; for(let i=0;i<8;i++) weatherParticles.push(new Cloud()); break;
+          case "rain_day": bg.style.background="linear-gradient(180deg,#37474f 0%,#263238 100%)"; for(let i=0;i<150;i++) weatherParticles.push(new RainDrop()); break;
+          case "snow_day": bg.style.background="linear-gradient(180deg,#546e7a 0%,#37474f 100%)"; for(let i=0;i<100;i++) weatherParticles.push(new SnowFlake()); break;
+          case "storm_day": bg.style.background="linear-gradient(180deg,#1a1a2e 0%,#0d0d1a 100%)"; for(let i=0;i<200;i++) weatherParticles.push(new RainDrop()); break;
+          default: bg.style.background="linear-gradient(180deg,#4a90d9 0%,#357abd 100%)"; for(let i=0;i<6;i++) weatherParticles.push(new SunRay());
         }
         animate();
       }
@@ -522,7 +548,7 @@
 
         const w = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,surface_pressure,wind_speed_10m,wind_direction_10m,is_day&hourly=temperature_2m,weather_code,precipitation_probability,wind_speed_10m,uv_index&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,uv_index_max,wind_speed_10m_max&timezone=auto&forecast_days=7`).then(r=>r.json());
         const c = w.current;
-        setWeatherType(c.weather_code);
+        setWeatherType(c.weather_code, c.is_day);
 
         const now = new Date();
         const nowH = now.getHours();
