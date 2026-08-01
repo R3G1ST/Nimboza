@@ -496,40 +496,42 @@
 
         const nowH = new Date().getHours();
         let hourlyHTML = "";
-        for (let i = 0; i < 24; i++) {
+        const hourlyLen = w.hourly ? Math.min(24, w.hourly.temperature_2m.length) : 0;
+        for (let i = 0; i < hourlyLen; i++) {
           const h = (nowH + i) % 24;
           const d = Math.floor((nowH + i) / 24);
           const time = i === 0 ? "Сейчас" : (d > 0 ? `+${d}д ${fmtTime(h,0).split(' ')[0]}` : fmtTime(h,0).split(' ')[0]);
-          const temp = fmtTemp(w.hourly.temperature_2m[i]);
-          const icon = icons[w.hourly.weather_code[i]] || "🌤️";
-          const precip = w.hourly.precipitation_probability[i] || 0;
-          const uv = w.hourly.uv_index[i] || 0;
+          const temp = fmtTemp(w.hourly.temperature_2m[i] ?? 0);
+          const icon = icons[w.hourly.weather_code?.[i]] || "🌤️";
+          const precip = w.hourly.precipitation_probability?.[i] || 0;
+          const uv = w.hourly.uv_index?.[i] || 0;
           hourlyHTML += `<div class="hourly-item ${i===0?'now':''}" style="animation-delay:${i*0.03}s"><div class="hourly-time">${time}</div><div class="hourly-icon">${icon}</div><div class="hourly-temp">${temp}°</div>${precip>0?`<div class="hourly-precip">💧${precip}%</div>`:''}${uv>3?`<div class="hourly-precip" style="color:#ffa726">☀️${uv}</div>`:''}</div>`;
         }
 
-        const allMin = Math.min(...w.daily.temperature_2m_min);
-        const allMax = Math.max(...w.daily.temperature_2m_max);
+        const allMin = Math.min(...(w.daily?.temperature_2m_min || [0]));
+        const allMax = Math.max(...(w.daily?.temperature_2m_max || [1]));
         const range = allMax - allMin || 1;
         let dailyHTML = "";
-        for (let i = 0; i < 7; i++) {
+        const dailyLen = w.daily ? Math.min(7, w.daily.time.length) : 0;
+        for (let i = 0; i < dailyLen; i++) {
           const day = dayName(w.daily.time[i], i);
-          const min = fmtTemp(w.daily.temperature_2m_min[i]);
-          const max = fmtTemp(w.daily.temperature_2m_max[i]);
-          const icon = icons[w.daily.weather_code[i]] || "🌤️";
-          const precip = w.daily.precipitation_probability_max[i] || 0;
+          const min = fmtTemp(w.daily.temperature_2m_min[i] ?? 0);
+          const max = fmtTemp(w.daily.temperature_2m_max[i] ?? 0);
+          const icon = icons[w.daily.weather_code?.[i]] || "🌤️";
+          const precip = w.daily.precipitation_probability_max?.[i] || 0;
           const left = ((w.daily.temperature_2m_min[i] - allMin) / range) * 100;
           const width = ((w.daily.temperature_2m_max[i] - w.daily.temperature_2m_min[i]) / range) * 100;
           dailyHTML += `<div class="daily-item" style="animation-delay:${i*0.05}s"><div class="daily-day">${day}</div><div class="daily-icon">${icon}</div><div class="daily-precip">${precip>0?`💧${precip}%`:''}</div><div class="daily-bar-container"><div class="daily-low">${min}°</div><div class="daily-bar"><div class="daily-bar-fill" style="left:${left}%;width:${Math.max(width,8)}%"></div></div><div class="daily-high">${max}°</div></div></div>`;
         }
 
         const highlights = [];
-        if (c.wind_speed_10m > 20) highlights.push({icon:"💨", text:`Сильный ветер ${fmtWind(c.wind_speed_10m)} ${windUnitLabel()} ${windDir(c.wind_direction_10m)}`});
-        if (w.daily.uv_index_max[0] > 5) highlights.push({icon:"☀️", text:`Высокий UV ${w.daily.uv_index_max[0]}`});
-        if (w.daily.precipitation_probability_max[0] > 50) highlights.push({icon:"🌧️", text:`Дождь ${w.daily.precipitation_probability_max[0]}%`});
-        const sr = w.daily.sunrise[0] ? new Date(w.daily.sunrise[0]) : null;
-        const ss = w.daily.sunset[0] ? new Date(w.daily.sunset[0]) : null;
+        if (c.wind_speed_10m > 20) highlights.push({icon:"💨", text:`Сильный ветер ${fmtWind(c.wind_speed_10m)} ${windUnitLabel()} ${windDir(c.wind_direction_10m || 0)}`});
+        if ((w.daily?.uv_index_max?.[0] || 0) > 5) highlights.push({icon:"☀️", text:`Высокий UV ${w.daily.uv_index_max[0]}`});
+        if ((w.daily?.precipitation_probability_max?.[0] || 0) > 50) highlights.push({icon:"🌧️", text:`Дождь ${w.daily.precipitation_probability_max[0]}%`});
+        const sr = w.daily?.sunrise?.[0] ? new Date(w.daily.sunrise[0]) : null;
+        const ss = w.daily?.sunset?.[0] ? new Date(w.daily.sunset[0]) : null;
         if (sr && ss) highlights.push({icon:"🌅", text:`Восход ${fmtTime(sr.getHours(),sr.getMinutes())} · Закат ${fmtTime(ss.getHours(),ss.getMinutes())}`});
-        if (w.daily.wind_speed_10m_max[0] > 30) highlights.push({icon:"🌪️", text:`Порывы до ${Math.round(w.daily.wind_speed_10m_max[0])} км/ч`});
+        if ((w.daily?.wind_speed_10m_max?.[0] || 0) > 30) highlights.push({icon:"🌪️", text:`Порывы до ${Math.round(w.daily.wind_speed_10m_max[0])} км/ч`});
         if (!highlights.length) highlights.push({icon:"✅", text:"Обычный день"});
 
         document.getElementById("content").innerHTML = `
@@ -540,7 +542,7 @@
           </div>
           <div class="current-temp">${fmtTemp(c.temperature_2m)}°</div>
           <div class="current-condition">${icons[c.weather_code]||''} ${weatherDesc[c.weather_code]}</div>
-          <div class="temp-range">Макс. ${fmtTemp(w.daily.temperature_2m_max[0])}${tempUnit()} · Мин. ${fmtTemp(w.daily.temperature_2m_min[0])}${tempUnit()}</div>
+          <div class="temp-range">Макс. ${fmtTemp(w.daily?.temperature_2m_max?.[0] ?? 0)}${tempUnit()} · Мин. ${fmtTemp(w.daily?.temperature_2m_min?.[0] ?? 0)}${tempUnit()}</div>
           <div class="card" style="animation-delay:0.2s"><div class="card-title">⚡ Ключевое</div><div class="highlights-content">${highlights.map((h,i)=>`<div class="highlight-chip" style="animation-delay:${0.3+i*0.1}s">${h.icon} ${h.text}</div>`).join('')}</div></div>
           <div class="card" style="animation-delay:0.3s"><div class="card-title">🕐 Почасово</div><div class="hourly-scroll">${hourlyHTML}</div></div>
           <div class="card" style="animation-delay:0.4s"><div class="card-title">📅 7 дней</div>${dailyHTML}</div>
@@ -550,7 +552,7 @@
             <div class="detail-card" style="animation-delay:0.6s"><div class="detail-label">🌡️ Ощущается</div><div class="detail-value">${fmtTemp(c.apparent_temperature)}<span class="detail-unit">${tempUnit()}</span></div></div>
             <div class="detail-card" style="animation-delay:0.65s"><div class="detail-label">🔵 Давление</div><div class="detail-value">${Math.round(c.surface_pressure)}<span class="detail-unit"> гПа</span></div></div>
             <div class="detail-card" style="animation-delay:0.7s"><div class="detail-label">🧭 Направление</div><div class="detail-value">${windDir(c.wind_direction_10m)}</div></div>
-            <div class="detail-card" style="animation-delay:0.75s"><div class="detail-label">☀️ UV индекс</div><div class="detail-value">${w.daily.uv_index_max[0]}<span class="detail-unit"> ${w.daily.uv_index_max[0]>5?'⚠️ высокий':''}</span></div></div>
+            <div class="detail-card" style="animation-delay:0.75s"><div class="detail-label">☀️ UV индекс</div><div class="detail-value">${w.daily?.uv_index_max?.[0] ?? '—'}<span class="detail-unit"> ${(w.daily?.uv_index_max?.[0] ?? 0)>5?'⚠️ высокий':''}</span></div></div>
             <div class="detail-card" style="animation-delay:0.8s"><div class="detail-label">🌅 Восход</div><div class="detail-value">${sr?fmtTime(sr.getHours(),sr.getMinutes()):'—'}</div></div>
             <div class="detail-card" style="animation-delay:0.85s"><div class="detail-label">🌇 Закат</div><div class="detail-value">${ss?fmtTime(ss.getHours(),ss.getMinutes()):'—'}</div></div>
           </div>`;
