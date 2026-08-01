@@ -269,12 +269,19 @@
           <div class="settings-item">
             <div class="settings-item-left">
               <div class="settings-item-icon">ℹ️</div>
-              <div><div class="settings-item-text">Nimboza</div><div class="settings-item-sub">v1.2.0 · Electron</div></div>
+              <div><div class="settings-item-text">Nimboza</div><div class="settings-item-sub">v1.3.1 · Electron</div></div>
             </div>
+          </div>
+          <div class="settings-item" onclick="checkUpdates()" style="cursor:pointer">
+            <div class="settings-item-left">
+              <div class="settings-item-icon">🔄</div>
+              <div><div class="settings-item-text">Проверить обновления</div><div class="settings-item-sub" id="updateStatus"></div></div>
+            </div>
+            <div class="settings-item-right">→</div>
           </div>
         </div>
       </div>
-      <div class="footer">Nimboza · v1.2.0</div>
+      <div class="footer">Nimboza · v1.3.1</div>
     </div>
   </div>
 
@@ -380,6 +387,26 @@
     function toggleTimeFormat() { settings.timeFormat = settings.timeFormat === '24' ? '12' : '24'; saveSettingsFile(); renderSettingsPage(); if (currentCity) load(); }
     function toggleWindUnit() { settings.windUnit = settings.windUnit === 'kmh' ? 'ms' : 'kmh'; saveSettingsFile(); renderSettingsPage(); if (currentCity) load(); }
     function toggleAnimations() { settings.animations = !settings.animations; saveSettingsFile(); renderSettingsPage(); if (!settings.animations && animationId) { cancelAnimationFrame(animationId); animationId = null; } if (settings.animations) { currentWeatherType = 'clear'; if (currentCity) load(); } }
+
+    async function checkUpdates() {
+      const status = document.getElementById('updateStatus');
+      status.textContent = 'Проверка...';
+      try {
+        const res = await fetch('https://api.github.com/repos/R3G1ST/nimboza/releases/latest');
+        const release = await res.json();
+        const latest = release.tag_name;
+        const current = 'v1.3.1';
+        if (latest !== current) {
+          status.textContent = `Доступно: ${latest} — скачайте с GitHub`;
+          const { shell } = require('electron');
+          shell.openExternal(release.html_url);
+        } else {
+          status.textContent = 'Установлена последняя версия';
+        }
+      } catch(e) {
+        status.textContent = 'Не удалось проверить';
+      }
+    }
 
     // Compare
     async function renderCompare() {
