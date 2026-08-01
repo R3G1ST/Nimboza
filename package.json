@@ -1,0 +1,51 @@
+{
+  "name": "nimboza",
+  "version": "1.3.0",
+  "description": "Nimboza — прогноз погоды с Telegram уведомлениями",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win",
+    "publish": "electron-builder --win --publish always"
+  },
+  "keywords": [
+    "weather",
+    "nimboza",
+    "telegram",
+    "notifications"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "build": {
+    "appId": "com.nimboza.app",
+    "productName": "Nimboza",
+    "publish": {
+      "provider": "github",
+      "owner": "R3G1ST",
+      "repo": "nimboza"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "installerIcon": "icon.ico",
+      "uninstallerIcon": "icon.ico",
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Nimboza"
+    }
+  },
+  "devDependencies": {
+    "electron": "^43.2.0",
+    "electron-builder": "^26.15.3"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9",
+    "sharp": "^0.35.3"
+  }
+}

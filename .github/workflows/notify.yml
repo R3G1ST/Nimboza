@@ -1,0 +1,72 @@
+name: Nimboza Telegram Notification
+
+on:
+  schedule:
+    - cron: '0 */3 * * *'  # Каждые 3 часа
+  workflow_dispatch:  # Ручной запуск
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check weather and send notification
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          WEATHER_CITY: ${{ secrets.WEATHER_CITY || 'Тюмень' }}
+        run: |
+          # Получаем координаты города
+          GEO=$(curl -s "https://geocoding-api.open-meteo.com/v1/search?name=${WEATHER_CITY}&count=1&language=ru")
+          LAT=$(echo $GEO | jq -r '.results[0].latitude')
+          LON=$(echo $GEO | jq -r '.results[0].longitude')
+          CITY_NAME=$(echo $GEO | jq -r '.results[0].name')
+          
+          if [ "$LAT" = "null" ]; then
+            echo "City not found"
+            exit 1
+          fi
+          
+          # Получаем погоду
+          WEATHER=$(curl -s "https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=1")
+          
+          TEMP=$(echo $WEATHER | jq -r '.current.temperature_2m')
+          FEELS=$(echo $WEATHER | jq -r '.current.apparent_temperature')
+          HUMIDITY=$(echo $WEATHER | jq -r '.current.relative_humidity_2m')
+          WIND=$(echo $WEATHER | jq -r '.current.wind_speed_10m')
+          CODE=$(echo $WEATHER | jq -r '.current.weather_code')
+          MAX_TEMP=$(echo $WEATHER | jq -r '.daily.temperature_2m_max[0]')
+          MIN_TEMP=$(echo $WEATHER | jq -r '.daily.temperature_2m_min[0]')
+          RAIN=$(echo $WEATHER | jq -r '.daily.precipitation_probability_max[0]')
+          
+          # Описания погоды
+          case $CODE in
+            0) DESC="Ясно ☀️" ;;
+            1|2) DESC="Малооблачно 🌤️" ;;
+            3) DESC="Пасмурно ☁️" ;;
+            45|48) DESC="Туман 🌫️" ;;
+            51|53|55) DESC="Морось 🌧️" ;;
+            61|63|65) DESC="Дождь 🌧️" ;;
+            71|73|75) DESC="Снег ❄️" ;;
+            80|81|82) DESC="Ливень 🌦️" ;;
+            95|96|99) DESC="Гроза ⛈️" ;;
+            *) DESC="Неизвестно" ;;
+          esac
+          
+          # Формируем сообщение
+          MESSAGE="🌍 ${CITY_NAME}
+          
+🌡️ Температура: ${TEMP}°C (ощущается ${FEELS}°)
+📊 Диапазон: ${MIN_TEMP}° — ${MAX_TEMP}°
+💧 Влажность: ${HUMIDITY}%
+💨 Ветер: ${WIND} км/ч
+🌧️ Вероятность дождя: ${RAIN}%
+
+☁️ ${DESC}"
+
+          # Отправляем в Telegram
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d chat_id="${TELEGRAM_CHAT_ID}" \
+            -d text="${MESSAGE}" \
+            -d parse_mode="HTML"
+          
+          echo "Notification sent!"
