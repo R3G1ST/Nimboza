@@ -822,6 +822,41 @@
 
     document.getElementById("city").value = settings.city;
     load();
+
+    // Auto-sync: poll server every 30s for changes from Mini App/Telegram
+    setInterval(() => {
+      if (!settings.telegramId) return;
+      const https = require('https');
+      https.get(`${SYNC_API}/all?user_id=${settings.telegramId}`, res => {
+        let d = '';
+        res.on('data', c => d += c);
+        res.on('end', () => {
+          try {
+            const data = JSON.parse(d);
+            if (data.favorites) {
+              const newNames = JSON.stringify(data.favorites.sort());
+              const oldNames = JSON.stringify(favorites.map(f=>f.name).sort());
+              if (newNames !== oldNames) {
+                favorites = data.favorites.map(name => ({ name }));
+                fs.writeFileSync(favFile, JSON.stringify(favorites));
+                renderFavChips();
+                if (currentCity && !favorites.some(f=>f.name===currentCity)) {
+                  // City removed from favorites externally
+                }
+              }
+            }
+            if (data.settings && Object.keys(data.settings).length) {
+              let changed = false;
+              if (data.settings.city && data.settings.city !== settings.city) { settings.city = data.settings.city; changed = true; }
+              if (data.settings.tempUnit && data.settings.tempUnit !== settings.tempUnit) { settings.tempUnit = data.settings.tempUnit; changed = true; }
+              if (data.settings.timeFormat && data.settings.timeFormat !== settings.timeFormat) { settings.timeFormat = data.settings.timeFormat; changed = true; }
+              if (data.settings.windUnit && data.settings.windUnit !== settings.windUnit) { settings.windUnit = data.settings.windUnit; changed = true; }
+              if (changed) { fs.writeFileSync(settingsFile, JSON.stringify(settings)); renderSettingsPage(); if (currentCity) load(); }
+            }
+          } catch(e) {}
+        });
+      }).on('error', () => {});
+    }, 30000);
   </script>
 </body>
 </html>

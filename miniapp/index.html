@@ -683,6 +683,34 @@
 
     document.getElementById("city").value = settings.defaultCity;
     loadFromServer().then(() => { renderFavChips(); load(); });
+
+    // Auto-sync: poll server every 30s for changes from PC/Telegram
+    setInterval(async () => {
+      const id = tgUserId || localStorage.getItem('nimboza-tg-userid');
+      if (!id) return;
+      try {
+        const res = await fetch(`${SYNC_API}/all?user_id=${id}`);
+        const data = await res.json();
+        if (data.favorites) {
+          const newFavs = data.favorites.map(name => ({ name }));
+          const newNames = JSON.stringify(newFavs);
+          const oldNames = JSON.stringify(favorites);
+          if (newNames !== oldNames) {
+            favorites = newFavs;
+            localStorage.setItem('nimboza-favs', JSON.stringify(favorites));
+            renderFavChips();
+          }
+        }
+        if (data.settings && Object.keys(data.settings).length) {
+          let changed = false;
+          if (data.settings.city && data.settings.city !== settings.defaultCity) { settings.defaultCity = data.settings.city; changed = true; }
+          if (data.settings.tempUnit && data.settings.tempUnit !== settings.tempUnit) { settings.tempUnit = data.settings.tempUnit; changed = true; }
+          if (data.settings.timeFormat && data.settings.timeFormat !== settings.timeFormat) { settings.timeFormat = data.settings.timeFormat; changed = true; }
+          if (data.settings.windUnit && data.settings.windUnit !== settings.windUnit) { settings.windUnit = data.settings.windUnit; changed = true; }
+          if (changed) { localStorage.setItem('nimboza-settings', JSON.stringify(settings)); renderSettings(); }
+        }
+      } catch(e) {}
+    }, 30000);
   </script>
 </body>
 </html>
