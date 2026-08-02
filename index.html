@@ -277,7 +277,14 @@
               <div class="settings-item-icon">🔄</div>
               <div><div class="settings-item-text">Проверить обновления</div><div class="settings-item-sub" id="updateStatus"></div></div>
             </div>
-            <div class="settings-item-right">→</div>
+          </div>
+          <div id="updateBtn" style="display:none;padding:0 12px 12px">
+            <button onclick="downloadUpdate()" style="width:100%;padding:10px;border:none;border-radius:8px;background:#e94560;color:#fff;font-size:13px;cursor:pointer;font-family:inherit">Скачать и установить</button>
+          </div>
+          <div id="updateProgress" style="display:none;padding:0 12px 12px">
+            <div style="height:4px;border-radius:2px;background:rgba(255,255,255,0.1);overflow:hidden">
+              <div id="updateProgressBar" style="height:100%;width:0;background:#e94560;transition:width 0.3s"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -388,31 +395,50 @@
     function toggleWindUnit() { settings.windUnit = settings.windUnit === 'kmh' ? 'ms' : 'kmh'; saveSettingsFile(); renderSettingsPage(); if (currentCity) load(); }
     function toggleAnimations() { settings.animations = !settings.animations; saveSettingsFile(); renderSettingsPage(); if (!settings.animations && animationId) { cancelAnimationFrame(animationId); animationId = null; } if (settings.animations) { currentWeatherType = 'clear'; if (currentCity) load(); } }
 
+    let updateData = null;
     async function checkUpdates() {
       const status = document.getElementById('updateStatus');
+      const btn = document.getElementById('updateBtn');
       status.textContent = 'Проверка...';
-      const https = require('https');
-      https.get('https://api.github.com/repos/R3G1ST/nimboza/releases/latest', { headers: { 'User-Agent': 'Nimboza' } }, (res) => {
-        let data = '';
-        res.on('data', c => data += c);
-        res.on('end', () => {
-          try {
-            const release = JSON.parse(data);
-            const latest = release.tag_name;
-            const current = 'v1.3.1';
-            if (latest !== current) {
-              status.textContent = `Доступно: ${latest} — скачайте с GitHub`;
-              require('electron').shell.openExternal(release.html_url);
-            } else {
-              status.textContent = 'Установлена последняя версия ✓';
-            }
-          } catch(e) {
-            status.textContent = 'Не удалось проверить';
-          }
-        });
-      }).on('error', () => {
-        status.textContent = 'Нет подключения к интернету';
+      btn.style.display = 'none';
+      const { ipcRenderer } = require('electron');
+      const result = await ipcRenderer.invoke('check-update');
+      if (result.status === 'up_to_date') {
+        status.textContent = `Установлена последняя версия v${result.version} ✓`;
+      } else if (result.status === 'available') {
+        updateData = result;
+        status.textContent = `Доступна версия v${result.version}`;
+        btn.style.display = 'block';
+      } else if (result.status === 'no_asset') {
+        status.textContent = `Версия v${result.version} доступна, но файл не найден`;
+      } else {
+        status.textContent = 'Не удалось проверить обновления';
+      }
+    }
+
+    async function downloadUpdate() {
+      const status = document.getElementById('updateStatus');
+      const btn = document.getElementById('updateBtn');
+      const prog = document.getElementById('updateProgress');
+      const progBar = document.getElementById('updateProgressBar');
+      btn.style.display = 'none';
+      prog.style.display = 'block';
+      const { ipcRenderer } = require('electron');
+      ipcRenderer.on('update-progress', (e, data) => {
+        const pct = Math.round((data.downloaded / data.total) * 100);
+        progBar.style.width = pct + '%';
+        status.textContent = `Скачивание... ${pct}%`;
       });
+      status.textContent = 'Скачивание...';
+      const result = await ipcRenderer.invoke('download-update', updateData.url);
+      if (result.status === 'done') {
+        status.textContent = 'Установка...';
+        prog.style.display = 'none';
+        await ipcRenderer.invoke('install-update', result.path);
+      } else {
+        status.textContent = 'Ошибка скачивания';
+        prog.style.display = 'none';
+      }
     }
 
     // Compare
