@@ -1,6 +1,6 @@
 {
   "name": "nimboza",
-  "version": "1.4.2",
+  "version": "1.5.1",
   "description": "Nimboza — прогноз погоды с Telegram уведомлениями",
   "main": "main.js",
   "scripts": {
@@ -44,8 +44,5 @@
     "electron": "^43.2.0",
     "electron-builder": "^26.15.3"
   },
-  "dependencies": {
-    "electron-updater": "^6.8.9",
-    "sharp": "^0.35.3"
-  }
+  "dependencies": {}
 }

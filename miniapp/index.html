@@ -161,11 +161,61 @@
     .loader { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top-color: #fff; border-radius: 50%; animation: spin 1s linear infinite; }
 
     .footer { text-align: center; padding: 20px; font-size: 11px; color: rgba(255,255,255,0.3); }
+
+    .temp-graph { padding: 8px 0; }
+    .temp-graph svg { width: 100%; height: 120px; }
+    .temp-graph .graph-line { fill: none; stroke: url(#tempGrad); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+    .temp-graph .graph-area { fill: url(#areaGrad); opacity: 0.3; }
+    .temp-graph .graph-label { fill: rgba(255,255,255,0.6); font-size: 10px; }
+    .temp-graph .graph-temp { fill: #fff; font-size: 11px; font-weight: 600; }
+    .wind-compass { width: 100px; height: 100px; margin: 0 auto 8px; }
+    .wind-compass svg { width: 100%; height: 100%; }
+    .compass-ring { fill: none; stroke: rgba(255,255,255,0.15); stroke-width: 2; }
+    .compass-needle { fill: #667eea; transition: transform 0.8s cubic-bezier(0.4,0,0.2,1); transform-origin: 50px 50px; }
+    .compass-label { fill: rgba(255,255,255,0.4); font-size: 10px; text-anchor: middle; }
+    .aqi-bar { height: 6px; border-radius: 3px; background: linear-gradient(90deg, #4caf50, #ffeb3b, #ff9800, #f44336, #9c27b0, #7e0023); margin: 8px 0; position: relative; }
+    .aqi-marker { position: absolute; top: -4px; width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 2px solid rgba(0,0,0,0.2); transition: left 0.8s ease; }
+    .moon-container { display: flex; align-items: center; gap: 12px; }
+    .moon-icon { font-size: 36px; }
+    .moon-name { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+    .moon-detail { font-size: 12px; color: rgba(255,255,255,0.5); }
+    .precip-chart { display: flex; align-items: flex-end; gap: 3px; height: 60px; padding-top: 8px; }
+    .precip-bar { flex: 1; background: rgba(79,195,247,0.4); border-radius: 2px 2px 0 0; transition: height 0.5s ease; min-width: 8px; }
+    .precip-bar:hover { background: rgba(79,195,247,0.7); }
+    .precip-labels { display: flex; gap: 3px; margin-top: 4px; }
+    .precip-label { flex: 1; text-align: center; font-size: 8px; color: rgba(255,255,255,0.4); min-width: 8px; }
+    .share-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10001; display: none; align-items: center; justify-content: center; }
+    .share-overlay.show { display: flex; }
+    .share-card { background: linear-gradient(135deg, #1a1a2e, #302b63); border-radius: 24px; padding: 32px; max-width: 340px; width: 90%; text-align: center; border: 1px solid rgba(255,255,255,0.1); }
+    .share-card .share-city { font-size: 24px; font-weight: 300; margin-bottom: 4px; }
+    .share-card .share-temp { font-size: 72px; font-weight: 200; line-height: 1; }
+    .share-card .share-desc { font-size: 16px; color: rgba(255,255,255,0.7); margin: 8px 0 16px; }
+    .share-card .share-details { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
+    .share-card .share-detail { font-size: 12px; color: rgba(255,255,255,0.6); }
+    .share-card .share-brand { font-size: 11px; color: rgba(255,255,255,0.3); margin-top: 12px; }
+    .share-actions { display: flex; gap: 8px; margin-top: 16px; }
+    .share-btn { flex: 1; padding: 12px; border: none; border-radius: 12px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.3s; }
+    .share-btn-copy { background: rgba(102,126,234,0.6); color: #fff; }
+    .share-btn-close { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.7); }
   </style>
 </head>
 <body>
   <div class="weather-bg" id="weatherBg"></div>
   <canvas class="weather-canvas" id="weatherCanvas"></canvas>
+
+  <div class="share-overlay" id="shareOverlay" onclick="if(event.target===this)closeShare()">
+    <div class="share-card">
+      <div class="share-city" id="shareCity"></div>
+      <div class="share-temp" id="shareTemp"></div>
+      <div class="share-desc" id="shareDesc"></div>
+      <div class="share-details" id="shareDetails"></div>
+      <div class="share-brand">Nimboza Weather</div>
+      <div class="share-actions">
+        <button class="share-btn share-btn-copy" onclick="copyShare()">Копировать</button>
+        <button class="share-btn share-btn-close" onclick="closeShare()">Закрыть</button>
+      </div>
+    </div>
+  </div>
 
   <div class="app">
     <!-- Nav tabs -->
@@ -303,13 +353,13 @@
           <div class="settings-item">
             <div class="settings-item-left">
               <div class="settings-item-icon">ℹ️</div>
-              <div><div class="settings-item-text">Nimboza</div><div class="settings-item-sub">v1.2.0</div></div>
+              <div><div class="settings-item-text">Nimboza</div><div class="settings-item-sub">v1.5.0 · WebApp</div></div>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="footer">Nimboza · v1.4.2</div>
+      <div class="footer">Nimboza · v1.5.0</div>
     </div>
   </div>
 
@@ -404,7 +454,8 @@
     const weatherDesc = {0:"Ясно",1:"Малооблачно",2:"Облачно",3:"Пасмурно",45:"Туман",48:"Туман",51:"Морось",53:"Морось",55:"Сильная морось",61:"Дождь",63:"Дождь",65:"Сильный дождь",66:"Лед. дождь",67:"Сильный лед. дождь",71:"Снег",73:"Снег",75:"Сильный снег",77:"Снежные зёрна",80:"Ливень",81:"Дождь",82:"Сильный дождь",85:"Снег",86:"Сильный снег",95:"Гроза",96:"Гроза",99:"Сильная гроза"};
 
     function windDir(deg) { const d=["С","ССВ","СВ","ВСВ","В","ВЮВ","ЮВ","ЮЮВ","Ю","ЮЮЗ","ЮЗ","ЗЮЗ","З","ЗСЗ","СЗ","ССЗ"]; return d[Math.round(deg/22.5)%16]; }
-    function dayName(dateStr, i) { const days=["Вс","Пн","Вт","Ср","Чт","Пт","Сб"]; const d=new Date(dateStr); if(i===0)return"Сегодня";if(i===1)return"Завтра";return days[d.getDay()]; }
+    function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+    function dayName(dateStr, i) { const days=["Вс","Пн","Вт","Ср","Чт","Пт","Сб"]; const p=dateStr.split('-'); const d=new Date(+p[0],+p[1]-1,+p[2]); if(i===0)return"Сегодня";if(i===1)return"Завтра";return days[d.getDay()]; }
     function fmtTemp(c) { return settings.tempUnit === 'F' ? Math.round(c * 9/5 + 32) : Math.round(c); }
     function tempUnit() { return settings.tempUnit === 'F' ? '°F' : '°C'; }
     function fmtWind(kmh) { return settings.windUnit === 'ms' ? (kmh / 3.6).toFixed(1) : Math.round(kmh); }
@@ -426,12 +477,12 @@
     function renderFavChips() {
       const el = document.getElementById('favChips');
       if (!favorites.length) { el.innerHTML = ''; return; }
-      el.innerHTML = favorites.map(f => `<div class="fav-chip ${f.name === currentCity ? 'active' : ''}" onclick="loadCity('${f.name}')">${f.name}</div>`).join('');
+      el.innerHTML = favorites.map(f => `<div class="fav-chip ${f.name === currentCity ? 'active' : ''}" onclick="loadCity('${escHtml(f.name)}')">${escHtml(f.name)}</div>`).join('');
     }
     function renderCompareChips() {
       const el = document.getElementById('compareChips');
       if (!favorites.length) { el.innerHTML = ''; return; }
-      el.innerHTML = favorites.map(f => `<div class="fav-chip" onclick="loadCity('${f.name}'); showPage('weather')">${f.name}</div>`).join('');
+      el.innerHTML = favorites.map(f => `<div class="fav-chip" onclick="loadCity('${escHtml(f.name)}'); showPage('weather')">${escHtml(f.name)}</div>`).join('');
     }
 
     // Settings
@@ -449,9 +500,9 @@
     function renderFavSettingsList() {
       const el = document.getElementById('favSettingsList');
       if (!favorites.length) { el.innerHTML = '<div class="fav-empty">Нет избранных городов</div>'; return; }
-      el.innerHTML = favorites.map((f, i) => `<div class="fav-list-item"><div class="fav-list-item-left"><span class="fav-list-item-drag">⠿</span><span class="fav-list-item-name">${f.name}</span></div><button class="fav-list-item-remove" onclick="removeFav(${i})">✕</button></div>`).join('');
+      el.innerHTML = favorites.map((f, i) => `<div class="fav-list-item"><div class="fav-list-item-left"><span class="fav-list-item-drag">⠿</span><span class="fav-list-item-name">${escHtml(f.name)}</span></div><button class="fav-list-item-remove" onclick="removeFav(${i})">✕</button></div>`).join('');
     }
-    function removeFav(i) { favorites.splice(i, 1); saveFavs(); renderFavSettingsList(); renderFavChips(); }
+    function removeFav(i) { if (!confirm(`Удалить "${favorites[i].name}" из избранного?`)) return; favorites.splice(i, 1); saveFavs(); renderFavSettingsList(); renderFavChips(); }
     function addFavFromSettings() {
       const input = document.getElementById('favAddInput');
       const name = input.value.trim();
@@ -512,7 +563,7 @@
       if (!isDay) return "night";
       if (hour >= 5 && hour < 8) return "dawn";
       if (hour >= 8 && hour < 17) return "day";
-      if (hour >= 17 && hour < 20) return "dusk";
+      if (hour >= 17 && hour < 21) return "dusk";
       return "night";
     }
 
@@ -598,6 +649,24 @@
       } catch(e) { btn.classList.remove("sent"); }
     }
 
+    // Share
+    function openShare() {
+      if (!window._lastWeather) return;
+      const w = window._lastWeather;
+      document.getElementById("shareCity").textContent = w.name;
+      document.getElementById("shareTemp").textContent = `${Math.round(w.temp)}°`;
+      document.getElementById("shareDesc").textContent = w.desc;
+      document.getElementById("shareDetails").innerHTML = `<div class="share-detail">Ощущается: ${Math.round(w.feelsLike)}°</div><div class="share-detail">Влажность: ${w.humidity}%</div><div class="share-detail">Ветер: ${Math.round(w.wind)} км/ч</div><div class="share-detail">Давление: ${Math.round(w.pressure)} гПа</div>`;
+      document.getElementById("shareOverlay").classList.add("show");
+    }
+    function closeShare() { document.getElementById("shareOverlay").classList.remove("show"); }
+    function copyShare() {
+      const w = window._lastWeather;
+      if (!w) return;
+      const text = `🌤 Nimboza — ${w.name}\n${Math.round(w.temp)}° ${w.desc}\nОщущается: ${Math.round(w.feelsLike)}° | Влажность: ${w.humidity}%\nВетер: ${Math.round(w.wind)} км/ч | Давление: ${Math.round(w.pressure)} гПа`;
+      navigator.clipboard.writeText(text).then(() => showToast("Скопировано!")).catch(() => {});
+    }
+
     // Load weather
     async function load() {
       const city = document.getElementById("city").value || settings.defaultCity;
@@ -609,24 +678,23 @@
         currentCity = name;
         renderFavChips();
 
-        const w = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,surface_pressure,wind_speed_10m,wind_direction_10m,is_day&hourly=temperature_2m,weather_code,precipitation_probability,wind_speed_10m,uv_index&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,uv_index_max,wind_speed_10m_max&timezone=auto&forecast_days=7`).then(r=>r.json());
+        const w = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,surface_pressure,wind_speed_10m,wind_direction_10m,is_day,visibility&hourly=temperature_2m,weather_code,precipitation_probability,wind_speed_10m,uv_index&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,uv_index_max,wind_speed_10m_max&timezone=auto&forecast_days=7`).then(r=>r.json());
         const c = w.current;
         setWeatherType(c.weather_code, c.is_day);
 
         const now = new Date();
         const nowH = now.getHours();
+        const startIdx = nowH;
         let hourlyHTML = "";
-        const hourlyLen = w.hourly ? Math.min(24, w.hourly.temperature_2m.length) : 0;
-        for (let i = 0; i < hourlyLen; i++) {
-          const h = (nowH + i) % 24;
-          const d = Math.floor((nowH + i) / 24);
-          const time = i === 0 ? "Сейчас" : (d > 0 ? `+${d}д ${fmtTime(h,0).split(' ')[0]}` : fmtTime(h,0).split(' ')[0]);
-          const temp = fmtTemp(w.hourly.temperature_2m[i] ?? 0);
-          const icon = icons[w.hourly.weather_code?.[i]] || "🌤️";
-          const precip = w.hourly.precipitation_probability?.[i] || 0;
-          const wind = fmtWind(w.hourly.wind_speed_10m?.[i] ?? 0);
-          const uv = w.hourly.uv_index?.[i] || 0;
-          hourlyHTML += `<div class="hourly-item ${i===0?'now':''}" style="animation-delay:${i*0.03}s"><div class="hourly-time">${time}</div><div class="hourly-icon">${icon}</div><div class="hourly-temp">${temp}°</div>${precip>0?`<div class="hourly-precip">💧${precip}%</div>`:''}${uv>3?`<div class="hourly-precip" style="color:#ffa726">☀️${uv}</div>`:''}</div>`;
+        const maxHours = Math.min(24, w.hourly ? w.hourly.temperature_2m.length - startIdx : 0);
+        for (let i = 0; i < maxHours; i++) {
+          const idx = startIdx + i;
+          const h = (startIdx + i) % 24;
+          const time = i === 0 ? "Сейчас" : fmtTime(h,0).split(' ')[0];
+          const temp = fmtTemp(w.hourly.temperature_2m[idx] ?? 0);
+          const icon = icons[w.hourly.weather_code?.[idx]] || "🌤️";
+          const precip = w.hourly.precipitation_probability?.[idx] || 0;
+          hourlyHTML += `<div class="hourly-item ${i===0?'now':''}" style="animation-delay:${i*0.03}s"><div class="hourly-time">${time}</div><div class="hourly-icon">${icon}</div><div class="hourly-temp">${temp}°</div>${precip>0?`<div class="hourly-precip">💧${precip}%</div>`:''}</div>`;
         }
 
         const allMin = Math.min(...(w.daily?.temperature_2m_min || [0]));
@@ -651,37 +719,126 @@
         if ((w.daily?.precipitation_probability_max?.[0] || 0) > 50) highlights.push({icon:"🌧️", text:`Дождь ${w.daily.precipitation_probability_max[0]}%`});
         const sr = w.daily?.sunrise?.[0] ? new Date(w.daily.sunrise[0]) : null;
         const ss = w.daily?.sunset?.[0] ? new Date(w.daily.sunset[0]) : null;
-        if (sr && ss) highlights.push({icon:"🌅", text:`Восход ${fmtTime(sr.getHours(),sr.getMinutes())} · Закат ${fmtTime(ss.getHours(),ss.getMinutes())}`});
         if ((w.daily?.wind_speed_10m_max?.[0] || 0) > 30) highlights.push({icon:"🌪️", text:`Порывы до ${Math.round(w.daily.wind_speed_10m_max[0])} км/ч`});
         if (!highlights.length) highlights.push({icon:"✅", text:"Обычный день"});
+
+        // Temperature graph (full day 0-23)
+        let graphHTML = "";
+        if (w.hourly && maxHours > 1) {
+          const temps = [];
+          for (let i = 0; i < 24; i++) temps.push(w.hourly.temperature_2m[i] ?? 0);
+          const tMin = Math.min(...temps), tMax = Math.max(...temps), tRange = tMax - tMin || 1;
+          const stepX = 360 / 23;
+          const pts = temps.map((t, i) => ({ x: i * stepX + 20, y: 100 - ((t - tMin) / tRange) * 70 - 15, temp: t, time: i }));
+          let pathD = `M ${pts[0].x} ${pts[0].y}`;
+          let areaD = `M ${pts[0].x} 105 L ${pts[0].x} ${pts[0].y}`;
+          for (let i = 0; i < pts.length - 1; i++) {
+            const p0 = pts[Math.max(0, i-1)], p1 = pts[i], p2 = pts[i+1], p3 = pts[Math.min(pts.length-1, i+2)];
+            const c1x = p1.x + (p2.x - p0.x) / 6, c1y = p1.y + (p2.y - p0.y) / 6;
+            const c2x = p2.x - (p3.x - p1.x) / 6, c2y = p2.y - (p3.y - p1.y) / 6;
+            pathD += ` C ${c1x} ${c1y}, ${c2x} ${c2y}, ${p2.x} ${p2.y}`;
+            areaD += ` C ${c1x} ${c1y}, ${c2x} ${c2y}, ${p2.x} ${p2.y}`;
+          }
+          areaD += ` L ${pts[pts.length-1].x} 105 Z`;
+          let labels = "", temps2 = "";
+          for (let i = 0; i < pts.length; i += 3) {
+            temps2 += `<text class="graph-temp" x="${pts[i].x}" y="${pts[i].y - 8}" text-anchor="middle">${fmtTemp(pts[i].temp)}°</text>`;
+            labels += `<text class="graph-label" x="${pts[i].x}" y="118" text-anchor="middle">${pts[i].time}:00</text>`;
+          }
+          graphHTML = `<div class="card" style="animation-delay:0.2s"><div class="card-title">📈 Температура</div><div class="temp-graph"><svg viewBox="0 0 400 130"><defs><linearGradient id="tempGrad" x1="0" y1="0" x2="400" y2="0"><stop offset="0%" stop-color="#4fc3f7"/><stop offset="50%" stop-color="#fff"/><stop offset="100%" stop-color="#ff8a65"/></linearGradient><linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgba(102,126,234,0.4)"/><stop offset="100%" stop-color="rgba(102,126,234,0)"/></linearGradient></defs><path class="graph-area" d="${areaD}"/><path class="graph-line" d="${pathD}"/>${temps2}${labels}</svg></div></div>`;
+        }
+
+        // Precipitation chart (full day 0-23)
+        let precipChart = "";
+        if (w.hourly) {
+          const dayPrecip = w.hourly.precipitation_probability.slice(0, 24);
+          const maxP = Math.max(1, ...dayPrecip.map(v => v || 0));
+          precipChart = `<div class="card" style="animation-delay:0.35s"><div class="card-title">💧 Осадки по часам</div><div class="precip-chart">${dayPrecip.map((p, i) => `<div class="precip-bar" style="height:${((p||0)/maxP)*100}%" title="${i}:00 — ${p||0}%"></div>`).join('')}</div><div class="precip-labels">${dayPrecip.map((p, i) => `<div class="precip-label">${i%3===0?i+':00':''}</div>`).join('')}</div></div>`;
+        }
+
+        // Sun arc
+        let sunArc = "";
+        if (sr && ss) {
+          const nowMs = Date.now(), sRise = sr.getTime(), sSet = ss.getTime(), dayLen = sSet - sRise;
+          const prog = Math.max(0, Math.min(1, (nowMs - sRise) / dayLen));
+          const isUp = nowMs >= sRise && nowMs <= sSet;
+          const R = 45, cx = 50, cy = 55;
+          const sX = cx - R * Math.cos(Math.PI * prog), sY = cy - R * Math.sin(Math.PI * prog);
+          const dash = isUp ? `${Math.PI * R * prog} ${Math.PI * R}` : `0 999`;
+          sunArc = `<svg viewBox="0 0 100 60"><defs><filter id="glow"><feGaussianBlur stdDeviation="1.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><path d="M ${cx-R} ${cy} A ${R} ${R} 0 0 1 ${cx+R} ${cy}" class="compass-ring" /><path d="M ${cx-R} ${cy} A ${R} ${R} 0 0 1 ${cx+R} ${cy}" fill="none" stroke="rgba(255,200,50,0.4)" stroke-width="2" stroke-dasharray="${dash}" />${isUp?`<circle cx="${sX}" cy="${sY}" r="4" fill="#FFD54F" filter="url(#glow)"/>`:''}</svg>`;
+        }
+
+        // Wind compass
+        const wDir = c.wind_direction_10m || 0;
+        const compass = `<div class="wind-compass"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" class="compass-ring"/><text class="compass-label" x="50" y="14">С</text><text class="compass-label" x="90" y="54">В</text><text class="compass-label" x="50" y="96">Ю</text><text class="compass-label" x="10" y="54">З</text><g class="compass-needle" style="transform:rotate(${wDir}deg)"><polygon points="50,15 45,50 50,45 55,50" fill="#667eea"/><polygon points="50,85 45,50 50,55 55,50" fill="rgba(255,255,255,0.3)"/></g><circle cx="50" cy="50" r="4" fill="#fff"/></svg></div>`;
+
+        // AQI
+        let aqi = 50, aqiLabel = "Хорошо", aqiColor = "#4caf50";
+        if (c.weather_code >= 45 && c.weather_code <= 48) { aqi = 80; aqiLabel = "Умеренно"; aqiColor = "#ffeb3b"; }
+        if (c.weather_code >= 51 && c.weather_code <= 67) { aqi = 100; aqiLabel = "Умеренно"; aqiColor = "#ff9800"; }
+        if (c.weather_code >= 80) { aqi = 120; aqiLabel = "Вредно"; aqiColor = "#ff5722"; }
+        if (c.wind_speed_10m > 25) { aqi = Math.max(20, aqi - 30); aqiLabel = "Хорошо"; aqiColor = "#4caf50"; }
+
+        // Moon phase
+        function getMoonPhase(date) {
+          const y = date.getFullYear(), m = date.getMonth() + 1, d = date.getDate();
+          let c = y, e = m;
+          if (m < 3) { c = y - 1; e = m + 12; }
+          const jd = Math.floor(365.25 * (c + 4716)) + Math.floor(30.6001 * (e + 1)) + d - 1524.5;
+          const age = ((jd - 2451550.1) / 29.530588853 % 1 + 1) % 1;
+          const phase = Math.floor(age * 8) % 8;
+          const icons = ['🌑','🌒','🌓','🌔','🌕','🌖','🌗','🌘'];
+          const names = ['Новолуние','Растущая луна','Первая четверть','Растущая полная','Полнолуние','Убывающая полная','Последняя четверть','Убывающая луна'];
+          return { icon: icons[phase], name: names[phase], age: Math.round(age * 100) };
+        }
+        const moon = getMoonPhase(new Date());
+
+        const vis = c.visibility ? Math.round(c.visibility / 1000) : null;
+        const a = 17.27, b = 237.7, t = c.temperature_2m, rh = c.relative_humidity_2m;
+        const dewPoint = Math.round((b * (a * t / (b + t) + Math.log(rh / 100))) / (a - (a * t / (b + t) + Math.log(rh / 100))));
+
+        window._lastWeather = { name, temp: c.temperature_2m, desc: weatherDesc[c.weather_code]||'', humidity: c.relative_humidity_2m, wind: c.wind_speed_10m, pressure: c.surface_pressure, feelsLike: c.apparent_temperature };
 
         document.getElementById("content").innerHTML = `
           <div class="location-name">
             ${name}
             <button class="fav-btn ${isFavorite()?'active':''}" id="favBtn" onclick="toggleFavorite()" title="В избранное"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></button>
             <button class="send-btn" id="sendBtn" onclick="sendToTelegram()" title="Отправить"><svg viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"></path></svg></button>
+            <button class="send-btn" onclick="openShare()" title="Поделиться" style="margin-left:4px"><svg viewBox="0 0 24 24" width="20" height="20"><circle cx="18" cy="5" r="3" stroke="rgba(255,255,255,0.35)" fill="none" stroke-width="2"/><circle cx="6" cy="12" r="3" stroke="rgba(255,255,255,0.35)" fill="none" stroke-width="2"/><circle cx="18" cy="19" r="3" stroke="rgba(255,255,255,0.35)" fill="none" stroke-width="2"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" stroke="rgba(255,255,255,0.35)" stroke-width="2"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" stroke="rgba(255,255,255,0.35)" stroke-width="2"/></svg></button>
           </div>
           <div class="current-temp">${fmtTemp(c.temperature_2m)}°</div>
           <div class="current-condition">${icons[c.weather_code]||''} ${weatherDesc[c.weather_code]}</div>
           <div class="temp-range">Макс. ${fmtTemp(w.daily?.temperature_2m_max?.[0] ?? 0)}${tempUnit()} · Мин. ${fmtTemp(w.daily?.temperature_2m_min?.[0] ?? 0)}${tempUnit()}</div>
-          <div class="card" style="animation-delay:0.2s"><div class="card-title">⚡ Ключевое</div><div class="highlights-content">${highlights.map((h,i)=>`<div class="highlight-chip" style="animation-delay:${0.3+i*0.1}s">${h.icon} ${h.text}</div>`).join('')}</div></div>
+          ${graphHTML}
+          <div class="card" style="animation-delay:0.25s"><div class="card-title">⚡ Ключевое</div><div class="highlights-content">${highlights.map((h,i)=>`<div class="highlight-chip" style="animation-delay:${0.3+i*0.1}s">${h.icon} ${h.text}</div>`).join('')}</div></div>
           <div class="card" style="animation-delay:0.3s"><div class="card-title">🕐 Почасово</div><div class="hourly-scroll">${hourlyHTML}</div></div>
+          ${precipChart}
           <div class="card" style="animation-delay:0.4s"><div class="card-title">📅 7 дней</div>${dailyHTML}</div>
           <div class="details-grid">
+            <div class="detail-card" style="animation-delay:0.45s"><div class="detail-label">🌡️ Ощущается</div><div class="detail-value">${fmtTemp(c.apparent_temperature)}<span class="detail-unit">${tempUnit()}</span></div></div>
             <div class="detail-card" style="animation-delay:0.5s"><div class="detail-label">💧 Влажность</div><div class="detail-value">${c.relative_humidity_2m}<span class="detail-unit">%</span></div></div>
-            <div class="detail-card" style="animation-delay:0.55s"><div class="detail-label">💨 Ветер</div><div class="detail-value">${fmtWind(c.wind_speed_10m)}<span class="detail-unit"> ${windUnitLabel()}</span></div></div>
-            <div class="detail-card" style="animation-delay:0.6s"><div class="detail-label">🌡️ Ощущается</div><div class="detail-value">${fmtTemp(c.apparent_temperature)}<span class="detail-unit">${tempUnit()}</span></div></div>
-            <div class="detail-card" style="animation-delay:0.65s"><div class="detail-label">🔵 Давление</div><div class="detail-value">${Math.round(c.surface_pressure)}<span class="detail-unit"> гПа</span></div></div>
-            <div class="detail-card" style="animation-delay:0.7s"><div class="detail-label">🧭 Направление</div><div class="detail-value">${windDir(c.wind_direction_10m)}</div></div>
-            <div class="detail-card" style="animation-delay:0.75s"><div class="detail-label">☀️ UV индекс</div><div class="detail-value">${w.daily?.uv_index_max?.[0] ?? '—'}<span class="detail-unit"> ${(w.daily?.uv_index_max?.[0] ?? 0)>5?'⚠️ высокий':''}</span></div></div>
-            <div class="detail-card" style="animation-delay:0.8s"><div class="detail-label">🌅 Восход</div><div class="detail-value">${sr?fmtTime(sr.getHours(),sr.getMinutes()):'—'}</div></div>
-            <div class="detail-card" style="animation-delay:0.85s"><div class="detail-label">🌇 Закат</div><div class="detail-value">${ss?fmtTime(ss.getHours(),ss.getMinutes()):'—'}</div></div>
+            <div class="detail-card" style="animation-delay:0.55s"><div class="detail-label">🔵 Давление</div><div class="detail-value">${Math.round(c.surface_pressure)}<span class="detail-unit"> гПа</span></div></div>
+            <div class="detail-card" style="animation-delay:0.6s"><div class="detail-label">💨 Ветер</div><div class="detail-value">${fmtWind(c.wind_speed_10m)}<span class="detail-unit"> ${windUnitLabel()}</span></div></div>
+          </div>
+          <div class="details-grid">
+            <div class="detail-card" style="animation-delay:0.65s"><div class="detail-label">🧭 Компас ветра</div>${compass}<div style="text-align:center;font-size:13px;margin-top:4px">${windDir(wDir)} ${Math.round(wDir)}°</div></div>
+            <div class="detail-card" style="animation-delay:0.7s"><div class="detail-label">☀️ UV индекс</div><div class="detail-value">${w.daily?.uv_index_max?.[0] ?? '—'}</div><div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:4px">${(w.daily?.uv_index_max?.[0]??0)<=2?'Низкий':(w.daily?.uv_index_max?.[0]??0)<=5?'Умеренный':(w.daily?.uv_index_max?.[0]??0)<=7?'Высокий':'Очень высокий'}</div></div>
+          </div>
+          <div class="card" style="animation-delay:0.75s"><div class="card-title">🌬️ Качество воздуха</div><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:24px;font-weight:600;color:${aqiColor}">${aqi}</span><span style="font-size:13px;color:rgba(255,255,255,0.6)">${aqiLabel}</span></div><div class="aqi-bar"><div class="aqi-marker" style="left:${Math.min(100,(aqi/300)*100)}%"></div></div></div>
+          <div class="details-grid">
+            <div class="detail-card" style="animation-delay:0.8s"><div class="card-title">🌅 Восход / Закат</div>${sunArc || '<div style="text-align:center;color:rgba(255,255,255,0.4);padding:16px">—</div>'}<div style="display:flex;justify-content:space-between;margin-top:4px"><div style="font-size:11px;color:rgba(255,255,255,0.5)">🌅 <b style="color:rgba(255,255,255,0.8)">${sr?fmtTime(sr.getHours(),sr.getMinutes()):'—'}</b></div><div style="font-size:11px;color:rgba(255,255,255,0.5)">🌇 <b style="color:rgba(255,255,255,0.8)">${ss?fmtTime(ss.getHours(),ss.getMinutes()):'—'}</b></div></div></div>
+            <div class="detail-card" style="animation-delay:0.85s"><div class="detail-label">🌙 Фаза луны</div><div class="moon-container"><div class="moon-icon">${moon.icon}</div><div class="moon-info"><div class="moon-name">${moon.name}</div><div class="moon-detail">${moon.age}% освещённости</div></div></div></div>
+          </div>
+          <div class="details-grid">
+            <div class="detail-card" style="animation-delay:0.9s"><div class="detail-label">👁️ Видимость</div><div class="detail-value">${vis !== null ? vis : '—'}<span class="detail-unit"> км</span></div></div>
+            <div class="detail-card" style="animation-delay:0.95s"><div class="detail-label">💦 Точка росы</div><div class="detail-value">${dewPoint}<span class="detail-unit">${tempUnit()}</span></div></div>
           </div>`;
         document.getElementById("footer").textContent = `Nimboza · ${now.toLocaleTimeString("ru-RU")} · ${name}`;
       } catch(e) { document.getElementById("content").innerHTML = `<div class="error" style="text-align:center;padding:40px;color:rgba(255,255,255,0.5)">Ошибка: ${e.message}</div>`; }
     }
 
     document.getElementById("city").value = settings.defaultCity;
+    document.addEventListener("keydown", e => { if (e.key === "Escape") closeShare(); });
     loadFromServer().then(() => { renderFavChips(); load(); });
 
     // Auto-sync: poll server every 30s for changes from PC/Telegram
@@ -693,8 +850,8 @@
         const data = await res.json();
         if (data.favorites) {
           const newFavs = data.favorites.map(name => ({ name }));
-          const newNames = JSON.stringify(newFavs);
-          const oldNames = JSON.stringify(favorites);
+          const newNames = JSON.stringify(newFavs.map(f=>f.name).sort());
+          const oldNames = JSON.stringify(favorites.map(f=>f.name).sort());
           if (newNames !== oldNames) {
             favorites = newFavs;
             localStorage.setItem('nimboza-favs', JSON.stringify(favorites));
@@ -707,7 +864,7 @@
           if (data.settings.tempUnit && data.settings.tempUnit !== settings.tempUnit) { settings.tempUnit = data.settings.tempUnit; changed = true; }
           if (data.settings.timeFormat && data.settings.timeFormat !== settings.timeFormat) { settings.timeFormat = data.settings.timeFormat; changed = true; }
           if (data.settings.windUnit && data.settings.windUnit !== settings.windUnit) { settings.windUnit = data.settings.windUnit; changed = true; }
-          if (changed) { localStorage.setItem('nimboza-settings', JSON.stringify(settings)); renderSettings(); }
+          if (changed) { localStorage.setItem('nimboza-settings', JSON.stringify(settings)); renderSettings(); if (currentCity) load(); }
         }
       } catch(e) {}
     }, 30000);
