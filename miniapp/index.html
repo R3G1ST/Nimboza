@@ -317,6 +317,9 @@
     const tg = window.Telegram?.WebApp;
     if (tg) { tg.ready(); tg.expand(); if (tg.themeParams) document.documentElement.style.setProperty('--tg-theme-bg-color', tg.themeParams.bg_color || '#1a1a2e'); }
 
+    const SYNC_API = 'https://nimboza.qmbox.ru/api';
+    const tgUserId = tg?.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : null;
+
     let settings = JSON.parse(localStorage.getItem('nimboza-settings') || '{}');
     if (!settings.defaultCity) settings.defaultCity = 'Тюмень';
     if (!settings.tempUnit) settings.tempUnit = 'C';
@@ -331,8 +334,55 @@
     let searchTimeout = null;
     let animationId = null;
 
-    function saveSettings() { localStorage.setItem('nimboza-settings', JSON.stringify(settings)); }
-    function saveFavs() { localStorage.setItem('nimboza-favs', JSON.stringify(favorites)); }
+    function saveSettings() {
+      localStorage.setItem('nimboza-settings', JSON.stringify(settings));
+      if (tgUserId) syncSettingsToServer();
+    }
+    function saveFavs() {
+      localStorage.setItem('nimboza-favs', JSON.stringify(favorites));
+      if (tgUserId) syncFavsToServer();
+    }
+
+    async function syncFavsToServer() {
+      try {
+        const favNames = favorites.map(f => f.name);
+        await fetch(`${SYNC_API}/favorites?user_id=${tgUserId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json; charset=utf-8' },
+          body: JSON.stringify({ favorites: favNames })
+        });
+      } catch(e) {}
+    }
+
+    async function syncSettingsToServer() {
+      try {
+        await fetch(`${SYNC_API}/settings?user_id=${tgUserId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json; charset=utf-8' },
+          body: JSON.stringify({ settings: { tempUnit: settings.tempUnit, timeFormat: settings.timeFormat, windUnit: settings.windUnit, animations: settings.animations, city: settings.defaultCity } })
+        });
+      } catch(e) {}
+    }
+
+    async function loadFromServer() {
+      if (!tgUserId) return;
+      try {
+        const res = await fetch(`${SYNC_API}/all?user_id=${tgUserId}`);
+        const data = await res.json();
+        if (data.favorites && data.favorites.length) {
+          favorites = data.favorites.map(name => ({ name }));
+          localStorage.setItem('nimboza-favs', JSON.stringify(favorites));
+        }
+        if (data.settings && Object.keys(data.settings).length) {
+          if (data.settings.city) settings.defaultCity = data.settings.city;
+          if (data.settings.tempUnit) settings.tempUnit = data.settings.tempUnit;
+          if (data.settings.timeFormat) settings.timeFormat = data.settings.timeFormat;
+          if (data.settings.windUnit) settings.windUnit = data.settings.windUnit;
+          if (data.settings.animations !== undefined) settings.animations = data.settings.animations;
+          localStorage.setItem('nimboza-settings', JSON.stringify(settings));
+        }
+      } catch(e) {}
+    }
     function isFavorite() { return currentCity && favorites.some(f => f.name === currentCity); }
 
     function toggleFavorite() {
@@ -627,7 +677,7 @@
     }
 
     document.getElementById("city").value = settings.defaultCity;
-    load();
+    loadFromServer().then(() => { renderFavChips(); load(); });
   </script>
 </body>
 </html>
