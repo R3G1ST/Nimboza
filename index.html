@@ -391,21 +391,28 @@
     async function checkUpdates() {
       const status = document.getElementById('updateStatus');
       status.textContent = 'Проверка...';
-      try {
-        const res = await fetch('https://api.github.com/repos/R3G1ST/nimboza/releases/latest');
-        const release = await res.json();
-        const latest = release.tag_name;
-        const current = 'v1.3.1';
-        if (latest !== current) {
-          status.textContent = `Доступно: ${latest} — скачайте с GitHub`;
-          const { shell } = require('electron');
-          shell.openExternal(release.html_url);
-        } else {
-          status.textContent = 'Установлена последняя версия';
-        }
-      } catch(e) {
-        status.textContent = 'Не удалось проверить';
-      }
+      const https = require('https');
+      https.get('https://api.github.com/repos/R3G1ST/nimboza/releases/latest', { headers: { 'User-Agent': 'Nimboza' } }, (res) => {
+        let data = '';
+        res.on('data', c => data += c);
+        res.on('end', () => {
+          try {
+            const release = JSON.parse(data);
+            const latest = release.tag_name;
+            const current = 'v1.3.1';
+            if (latest !== current) {
+              status.textContent = `Доступно: ${latest} — скачайте с GitHub`;
+              require('electron').shell.openExternal(release.html_url);
+            } else {
+              status.textContent = 'Установлена последняя версия ✓';
+            }
+          } catch(e) {
+            status.textContent = 'Не удалось проверить';
+          }
+        });
+      }).on('error', () => {
+        status.textContent = 'Нет подключения к интернету';
+      });
     }
 
     // Compare
