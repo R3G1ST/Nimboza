@@ -318,7 +318,7 @@
     if (tg) { tg.ready(); tg.expand(); if (tg.themeParams) document.documentElement.style.setProperty('--tg-theme-bg-color', tg.themeParams.bg_color || '#1a1a2e'); }
 
     const SYNC_API = 'https://nimboza.qmbox.ru/api';
-    const tgUserId = tg?.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : null;
+    let tgUserId = tg?.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : null;
 
     let settings = JSON.parse(localStorage.getItem('nimboza-settings') || '{}');
     if (!settings.defaultCity) settings.defaultCity = 'Тюмень';
@@ -365,6 +365,11 @@
     }
 
     async function loadFromServer() {
+      // If not in Telegram, try saved ID from localStorage
+      if (!tgUserId) {
+        const savedId = localStorage.getItem('nimboza-tg-userid');
+        if (savedId) tgUserId = savedId;
+      }
       if (!tgUserId) return;
       try {
         const res = await fetch(`${SYNC_API}/all?user_id=${tgUserId}`);
