@@ -422,7 +422,7 @@
       status.textContent = 'Создание сессии...';
       const https = require('https');
       const sessionId = await new Promise((resolve, reject) => {
-        const req = https.request(`${SYNC_API}/api/auth/start`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': 0 } }, res => {
+        const req = https.request(`${SYNC_API}/auth/start`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': 0 } }, res => {
           let b = ''; res.on('data', c => b += c);
           res.on('end', () => resolve(JSON.parse(b).session_id));
         });
@@ -439,7 +439,7 @@
       const status = document.getElementById('telegramAuthStatus');
       const https = require('https');
       const poll = () => {
-        https.get(`${SYNC_API}/api/auth/poll?session_id=${sessionId}`, res => {
+        https.get(`${SYNC_API}/auth/poll?session_id=${sessionId}`, res => {
           let b = ''; res.on('data', c => b += c);
           res.on('end', () => {
             const r = JSON.parse(b);
