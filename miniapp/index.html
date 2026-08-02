@@ -116,7 +116,8 @@
     .settings-item-icon { width: 36px; height: 36px; border-radius: 10px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 18px; }
     .settings-item-text { font-size: 15px; font-weight: 500; }
     .settings-item-sub { font-size: 12px; color: rgba(255,255,255,0.4); margin-top: 2px; }
-    .settings-item-right { color: rgba(255,255,255,0.4); font-size: 14px; }
+    .settings-item-right { color: rgba(255,255,255,0.6); font-size: 14px; cursor: pointer; padding: 4px 12px; border-radius: 8px; transition: all 0.2s; }
+    .settings-item-right:hover { background: rgba(255,255,255,0.1); color: #fff; }
     .toggle { position: relative; width: 48px; height: 28px; border-radius: 14px; background: rgba(255,255,255,0.15); cursor: pointer; transition: background 0.3s; }
     .toggle.on { background: rgba(102,126,234,0.7); }
     .toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; transition: transform 0.3s; }
@@ -139,7 +140,8 @@
 
     /* Compare cities */
     .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .compare-card { background: rgba(255,255,255,0.08); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.06); text-align: center; }
+    .compare-card { background: rgba(255,255,255,0.08); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.06); text-align: center; transition: all 0.3s; }
+    .compare-card:hover { background: rgba(255,255,255,0.12); transform: translateY(-2px); }
     .compare-city { font-size: 14px; font-weight: 500; margin-bottom: 8px; }
     .compare-temp { font-size: 36px; font-weight: 600; margin-bottom: 4px; }
     .compare-desc { font-size: 12px; color: rgba(255,255,255,0.5); }
@@ -198,6 +200,12 @@
 
     <!-- Compare Page -->
     <div class="page" id="page-compare">
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <button class="btn-icon" onclick="renderCompare()" title="Обновить" style="flex:0">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+        </button>
+        <div style="flex:1;font-size:13px;color:rgba(255,255,255,0.5);display:flex;align-items:center">Сравнение избранных городов</div>
+      </div>
       <div id="compareContent">
         <div class="fav-chips" id="compareChips"></div>
         <div id="compareGrid" class="compare-grid"></div>
@@ -240,21 +248,21 @@
               <div class="settings-item-icon">🌡️</div>
               <div><div class="settings-item-text">Единицы температуры</div></div>
             </div>
-            <div class="settings-item-right" id="tempUnitDisplay" onclick="toggleTempUnit()" style="cursor:pointer">°C</div>
+            <div class="settings-item-right" id="tempUnitDisplay" onclick="toggleTempUnit()">°C</div>
           </div>
           <div class="settings-item">
             <div class="settings-item-left">
               <div class="settings-item-icon">🕐</div>
               <div><div class="settings-item-text">Формат времени</div></div>
             </div>
-            <div class="settings-item-right" id="timeFormatDisplay" onclick="toggleTimeFormat()" style="cursor:pointer">24ч</div>
+            <div class="settings-item-right" id="timeFormatDisplay" onclick="toggleTimeFormat()">24ч</div>
           </div>
           <div class="settings-item">
             <div class="settings-item-left">
               <div class="settings-item-icon">🌬️</div>
               <div><div class="settings-item-text">Скорость ветра</div></div>
             </div>
-            <div class="settings-item-right" id="windUnitDisplay" onclick="toggleWindUnit()" style="cursor:pointer">км/ч</div>
+            <div class="settings-item-right" id="windUnitDisplay" onclick="toggleWindUnit()">км/ч</div>
           </div>
           <div class="settings-item">
             <div class="settings-item-left">
@@ -301,7 +309,7 @@
         </div>
       </div>
 
-      <div class="footer">Nimboza · v1.2.0</div>
+      <div class="footer">Nimboza · v1.4.1</div>
     </div>
   </div>
 
@@ -403,7 +411,7 @@
     function toggleTempUnit() { settings.tempUnit = settings.tempUnit === 'C' ? 'F' : 'C'; saveSettings(); renderSettings(); if (currentCity) load(); }
     function toggleTimeFormat() { settings.timeFormat = settings.timeFormat === '24' ? '12' : '24'; saveSettings(); renderSettings(); if (currentCity) load(); }
     function toggleWindUnit() { settings.windUnit = settings.windUnit === 'kmh' ? 'ms' : 'kmh'; saveSettings(); renderSettings(); if (currentCity) load(); }
-    function toggleAnimations() { settings.animations = !settings.animations; saveSettings(); renderSettings(); if (!settings.animations && animationId) { cancelAnimationFrame(animationId); animationId = null; } if (settings.animations && currentCity) load(); }
+    function toggleAnimations() { settings.animations = !settings.animations; saveSettings(); renderSettings(); if (!settings.animations && animationId) { cancelAnimationFrame(animationId); animationId = null; } if (settings.animations) { currentWeatherType = 'clear'; if (currentCity) load(); } }
     function toggleAutoNotif() { settings.autoNotif = !settings.autoNotif; saveSettings(); renderSettings(); }
     function saveChatId() { settings.chatId = document.getElementById('chatIdInput').value.trim(); saveSettings(); showToast('Chat ID сохранён'); }
 
