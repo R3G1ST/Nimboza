@@ -344,8 +344,27 @@
 
     try { favorites = JSON.parse(fs.readFileSync(favFile, "utf8")); } catch(e) {}
     try { settings = { ...settings, ...JSON.parse(fs.readFileSync(settingsFile, "utf8")) }; } catch(e) {}
-    function saveFavs() { try { fs.writeFileSync(favFile, JSON.stringify(favorites)); } catch(e) {} }
-    function saveSettingsFile() { try { fs.writeFileSync(settingsFile, JSON.stringify(settings)); } catch(e) {} }
+    function saveFavs() { try { fs.writeFileSync(favFile, JSON.stringify(favorites)); } catch(e) {} autoSync(); }
+    function saveSettingsFile() { try { fs.writeFileSync(settingsFile, JSON.stringify(settings)); } catch(e) {} autoSync(); }
+
+    let syncTimeout = null;
+    function autoSync() {
+      if (!settings.telegramId) return;
+      if (syncTimeout) clearTimeout(syncTimeout);
+      syncTimeout = setTimeout(() => {
+        const https = require('https');
+        const favData = JSON.stringify({ favorites: favorites.map(f => f.name) });
+        const req1 = https.request(`${SYNC_API}/favorites?user_id=${settings.telegramId}`, { method: 'POST', headers: { 'Content-Type': 'application/json; charset=utf-8', 'Content-Length': Buffer.byteLength(favData, 'utf8') } }, () => {});
+        req1.on('error', () => {});
+        req1.write(favData);
+        req1.end();
+        const setData = JSON.stringify({ settings: { tempUnit: settings.tempUnit, timeFormat: settings.timeFormat, windUnit: settings.windUnit, animations: settings.animations, city: settings.city } });
+        const req2 = https.request(`${SYNC_API}/settings?user_id=${settings.telegramId}`, { method: 'POST', headers: { 'Content-Type': 'application/json; charset=utf-8', 'Content-Length': Buffer.byteLength(setData, 'utf8') } }, () => {});
+        req2.on('error', () => {});
+        req2.write(setData);
+        req2.end();
+      }, 500);
+    }
 
     function fetch(url) {
       return new Promise((resolve, reject) => {
