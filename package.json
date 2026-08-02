@@ -1,6 +1,6 @@
 {
   "name": "nimboza",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "description": "Nimboza — прогноз погоды с Telegram уведомлениями",
   "main": "main.js",
   "scripts": {
