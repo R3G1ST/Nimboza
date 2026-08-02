@@ -49,7 +49,7 @@ npm start
 
 ## Telegram Mini App
 
-[@Controlbot3x_bot](https://t.me/Controlbot3x_bot) | [nimboza.qmbox.ru](https://nimboza.qmbox.ru)
+[@Controlbot3x_bot](https://t.me/Controlbot3x_bot) 
 
 ## Технологии
 
