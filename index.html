@@ -232,22 +232,36 @@
       <div class="settings-section">
         <div class="settings-title">Синхронизация</div>
         <div class="settings-card">
-          <div class="settings-item">
-            <div class="settings-item-left">
-              <div class="settings-item-icon">🔗</div>
-              <div>
-                <div class="settings-item-text">Telegram User ID</div>
-                <div class="settings-item-sub">Для синхронизации избранных и настроек с Telegram ботом</div>
+          <div id="telegramAuthSection">
+            <div class="settings-item" id="telegramAuthBtn" onclick="startTelegramAuth()" style="cursor:pointer">
+              <div class="settings-item-left">
+                <div class="settings-item-icon">🔗</div>
+                <div>
+                  <div class="settings-item-text">Войти через Telegram</div>
+                  <div class="settings-item-sub" id="telegramAuthStatus">Нажмите для привязки аккаунта</div>
+                </div>
               </div>
+              <div class="settings-item-right">→</div>
             </div>
           </div>
-          <div style="padding:0 12px 12px">
-            <input type="text" id="telegramIdInput" placeholder="Введите ваш Telegram User ID" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#fff;font-size:13px;box-sizing:border-box" />
-            <div style="display:flex;gap:8px;margin-top:8px">
-              <button onclick="syncFromTelegram()" style="flex:1;padding:8px;border:none;border-radius:8px;background:rgba(255,255,255,0.1);color:#fff;font-size:12px;cursor:pointer;font-family:inherit">Загрузить из Telegram</button>
-              <button onclick="syncToTelegram()" style="flex:1;padding:8px;border:none;border-radius:8px;background:rgba(255,255,255,0.1);color:#fff;font-size:12px;cursor:pointer;font-family:inherit">Сохранить в Telegram</button>
+          <div id="telegramSyncSection" style="display:none">
+            <div class="settings-item">
+              <div class="settings-item-left">
+                <div class="settings-item-icon">✅</div>
+                <div>
+                  <div class="settings-item-text">Telegram привязан</div>
+                  <div class="settings-item-sub" id="telegramIdDisplay"></div>
+                </div>
+              </div>
+              <div class="settings-item-right" onclick="unlinkTelegram()" style="cursor:pointer;color:#e94560">✕</div>
             </div>
-            <div id="syncStatus" style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:6px"></div>
+            <div style="padding:0 12px 12px">
+              <div style="display:flex;gap:8px">
+                <button onclick="syncFromTelegram()" style="flex:1;padding:8px;border:none;border-radius:8px;background:rgba(255,255,255,0.1);color:#fff;font-size:12px;cursor:pointer;font-family:inherit">Загрузить из Telegram</button>
+                <button onclick="syncToTelegram()" style="flex:1;padding:8px;border:none;border-radius:8px;background:rgba(255,255,255,0.1);color:#fff;font-size:12px;cursor:pointer;font-family:inherit">Сохранить в Telegram</button>
+              </div>
+              <div id="syncStatus" style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:6px"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -392,8 +406,62 @@
       document.getElementById('timeFormatDisplay').textContent = settings.timeFormat + 'ч';
       document.getElementById('windUnitDisplay').textContent = windUnitLabel();
       document.getElementById('animToggle').classList.toggle('on', settings.animations);
-      document.getElementById('telegramIdInput').value = settings.telegramId || '';
+      renderTelegramSection();
       renderFavSettingsList();
+    }
+
+    function renderTelegramSection() {
+      const hasId = !!settings.telegramId;
+      document.getElementById('telegramAuthSection').style.display = hasId ? 'none' : 'block';
+      document.getElementById('telegramSyncSection').style.display = hasId ? 'block' : 'none';
+      if (hasId) document.getElementById('telegramIdDisplay').textContent = 'ID: ' + settings.telegramId;
+    }
+
+    async function startTelegramAuth() {
+      const status = document.getElementById('telegramAuthStatus');
+      status.textContent = 'Создание сессии...';
+      const https = require('https');
+      const sessionId = await new Promise((resolve, reject) => {
+        const req = https.request(`${SYNC_API}/api/auth/start`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': 0 } }, res => {
+          let b = ''; res.on('data', c => b += c);
+          res.on('end', () => resolve(JSON.parse(b).session_id));
+        });
+        req.on('error', reject);
+        req.end();
+      });
+      status.textContent = 'Откройте Telegram и нажмите Start';
+      const { shell } = require('electron');
+      shell.openExternal(`https://t.me/Controlbot3x_bot?start=auth_${sessionId}`);
+      pollAuth(sessionId);
+    }
+
+    function pollAuth(sessionId) {
+      const status = document.getElementById('telegramAuthStatus');
+      const https = require('https');
+      const poll = () => {
+        https.get(`${SYNC_API}/api/auth/poll?session_id=${sessionId}`, res => {
+          let b = ''; res.on('data', c => b += c);
+          res.on('end', () => {
+            const r = JSON.parse(b);
+            if (r.status === 'done') {
+              settings.telegramId = r.user_id;
+              saveSettingsFile();
+              renderSettingsPage();
+              showToast('Telegram привязан!');
+            } else {
+              setTimeout(poll, 2000);
+            }
+          });
+        }).on('error', () => setTimeout(poll, 3000));
+      };
+      poll();
+    }
+
+    function unlinkTelegram() {
+      settings.telegramId = '';
+      saveSettingsFile();
+      renderSettingsPage();
+      showToast('Telegram отвязан');
     }
     function renderFavSettingsList() {
       const el = document.getElementById('favSettingsList');
@@ -411,7 +479,6 @@
       settings.botToken = document.getElementById('setBotToken').value.trim();
       settings.chatId = document.getElementById('setChatId').value.trim();
       settings.city = document.getElementById('setNotifCity').value.trim() || 'Тюмень';
-      settings.telegramId = document.getElementById('telegramIdInput').value.trim();
       saveSettingsFile();
       showToast('Настройки сохранены');
     }
@@ -420,7 +487,7 @@
 
     async function syncToTelegram() {
       const id = settings.telegramId;
-      if (!id) { document.getElementById('syncStatus').textContent = 'Введите Telegram User ID'; return; }
+      if (!id) { document.getElementById('syncStatus').textContent = 'Сначала привяжите Telegram'; return; }
       const status = document.getElementById('syncStatus');
       status.textContent = 'Сохранение...';
       try {
@@ -447,7 +514,7 @@
 
     async function syncFromTelegram() {
       const id = settings.telegramId;
-      if (!id) { document.getElementById('syncStatus').textContent = 'Введите Telegram User ID'; return; }
+      if (!id) { document.getElementById('syncStatus').textContent = 'Сначала привяжите Telegram'; return; }
       const status = document.getElementById('syncStatus');
       status.textContent = 'Загрузка...';
       try {
