@@ -193,7 +193,9 @@ ipcMain.handle("install-update", async (event, installerPath) => {
     defaultId: 0,
   });
   if (confirmed.response !== 0) return { status: "cancelled" };
-  exec(`"${installerPath}" /S`, () => {});
+  const { spawn } = require("child_process");
+  const child = spawn(installerPath, [], { detached: true, stdio: "ignore" });
+  child.unref();
   app.quit();
   return { status: "installing" };
 });
