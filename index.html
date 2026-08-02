@@ -334,6 +334,7 @@
     const fs = require("fs");
     const path = require("path");
 
+    const SYNC_API = 'https://nimboza.qmbox.ru/api';
     const favFile = path.join(process.env.APPDATA || process.env.HOME, "weather-favorites.json");
     const settingsFile = path.join(process.env.APPDATA || process.env.HOME, "weather-settings.json");
     let favorites = [];
@@ -501,8 +502,6 @@
       saveSettingsFile();
       showToast('Настройки сохранены');
     }
-
-    const SYNC_API = 'https://nimboza.qmbox.ru/api';
 
     async function syncToTelegram() {
       const id = settings.telegramId;
